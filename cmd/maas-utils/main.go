@@ -63,8 +63,10 @@ var (
 
 // Supported subcommands.
 var subcommands = map[string]string{
-	"list-ips":    "Lists all statically allocated IP addresses",
-	"release-ips": "Releases all statically allocated IP addresses",
+	"list-ips":      "Lists all statically allocated IP addresses",
+	"release-ips":   "Releases all statically allocated IP addresses",
+	"list-networks": "Lists all networks defined in MAAS",
+	"list-nics":     "Lists all interfaces of all node groups",
 }
 
 func main() {
@@ -114,6 +116,10 @@ func main() {
 		listIPs()
 	case "release-ips":
 		releaseIPs()
+	case "list-networks":
+		listNetworks()
+	case "list-nics":
+		listNICs()
 	}
 }
 
