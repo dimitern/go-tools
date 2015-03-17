@@ -1,11 +1,15 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/juju/errors"
 )
 
 // Address describes an IP address or hostname.
@@ -19,6 +23,10 @@ func (a Address) String() string {
 		return a.IP.String()
 	}
 	return a.Hostname
+}
+
+func (a Address) IsEmpty() bool {
+	return a.IP == nil && a.Hostname == ""
 }
 
 // Addresses defines a list of Address entries.
@@ -36,7 +44,7 @@ func (a Addresses) String() string {
 type Network struct {
 	Name        string
 	Description string
-	Netmask     Address
+	Netmask     net.IPMask
 	VLANTag     int
 	DNSServers  Addresses
 	IP          Address
@@ -81,7 +89,7 @@ func (n *Network) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	n.Netmask, err = fields.AddressField("netmask", false)
+	n.Netmask, err = fields.NetmaskField("netmask", false)
 	if err != nil {
 		return err
 	}
@@ -131,7 +139,7 @@ type Interface struct {
 	Interface         string
 	RouterIP          Address
 	BroadcastIP       Address
-	Netmask           Address
+	Netmask           net.IPMask
 	DHCPRangeLowIP    Address
 	DHCPRangeHighIP   Address
 	StaticRangeLowIP  Address
@@ -162,7 +170,7 @@ func (i *Interface) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	i.Netmask, err = fields.AddressField("subnet_mask", true)
+	i.Netmask, err = fields.NetmaskField("subnet_mask", true)
 	if err != nil {
 		return err
 	}
@@ -188,6 +196,10 @@ func (i *Interface) UnmarshalJSON(data []byte) error {
 	}
 	i.Management = ManagementType(mgmt)
 	return nil
+}
+
+func (i *Interface) HasStaticRange() bool {
+	return !i.StaticRangeLowIP.IsEmpty() && !i.StaticRangeHighIP.IsEmpty()
 }
 
 func (i *Interface) GoString() string {
@@ -258,4 +270,37 @@ func (s *StaticIP) GoString() string {
 
 func (s *StaticIP) String() string {
 	return fmt.Sprintf("static IP address %q", s.IP)
+}
+
+// ParseIPv4Mask parses a given IPv4 netmask in dotted quad format (e.g. "255.255.240.0").
+func ParseIPv4Mask(mask string) (net.IPMask, error) {
+	parts := strings.Split(strings.TrimSpace(mask), ".")
+	if len(parts) != 4 {
+		return nil, fmt.Errorf("invalid IPv4 netmask: %v", mask)
+	}
+	bytes := make([]byte, len(parts))
+	for i, part := range parts {
+		npart, err := strconv.Atoi(part)
+		if err != nil {
+			return nil, fmt.Errorf("invalid IPv4 netmask %v: %v", mask, err)
+		}
+		bytes[i] = byte(npart)
+	}
+	return net.IPMask(bytes), nil
+}
+
+// DecimalToIPv4 converts a decimal to the dotted quad IP address format.
+func DecimalToIPv4(addr uint32) net.IP {
+	bytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(bytes, addr)
+	return net.IP(bytes)
+}
+
+// IPv4ToDecimal converts a dotted quad IP address to its decimal equivalent.
+func IPv4ToDecimal(ipv4Addr net.IP) (uint32, error) {
+	ip := ipv4Addr.To4()
+	if ip == nil {
+		return 0, errors.Errorf("%q is not a valid IPv4 address", ipv4Addr.String())
+	}
+	return binary.BigEndian.Uint32([]byte(ip)), nil
 }

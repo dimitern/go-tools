@@ -7,18 +7,18 @@ import (
 	"launchpad.net/gomaasapi"
 )
 
-func getNodeGroups(ng gomaasapi.MAASObject) map[string]gomaasapi.MAASObject {
+func getNodeGroupsUUIDs(maasRoot *gomaasapi.MAASObject) []string {
+	ng := maasRoot.GetSubObject("nodegroups")
 	result, err := ng.CallGet("list", nil)
 	if err != nil {
 		fatalf("cannot get node groups: %v", err)
 	}
-
 	nodeGroups, err := result.GetArray()
 	if err != nil {
 		fatalf("cannot list node groups: %v", err)
 	}
 	debugf("GetArray returned %d results", len(nodeGroups))
-	ng2obj := make(map[string]gomaasapi.MAASObject, len(nodeGroups))
+	uuids := make([]string, len(nodeGroups))
 	for i, ngroup := range nodeGroups {
 		objMap, err := ngroup.GetMap()
 		if err != nil {
@@ -32,17 +32,14 @@ func getNodeGroups(ng gomaasapi.MAASObject) map[string]gomaasapi.MAASObject {
 		if err != nil {
 			fatalf("cannot get node group #%d UUID as string: %v", i, err)
 		}
-		ng2obj[sUUID] = ng.GetSubObject(sUUID)
+		uuids[i] = sUUID
 	}
-	return ng2obj
+	return uuids
 }
 
-func getNICs(nodeGroups map[string]gomaasapi.MAASObject, uuidNG string) []Interface {
-	nodeGroup, ok := nodeGroups[uuidNG]
-	if !ok {
-		fatalf("cannot find node group %q in %v", uuidNG, nodeGroups)
-	}
-	result, err := nodeGroup.GetSubObject("interfaces").CallGet("list", nil)
+func getNICs(maasRoot *gomaasapi.MAASObject, uuidNG string) []Interface {
+	ngi := maasRoot.GetSubObject("nodegroups").GetSubObject(uuidNG).GetSubObject("interfaces")
+	result, err := ngi.CallGet("list", nil)
 	if err != nil {
 		fatalf("cannot get node group %q interfaces: %v", uuidNG, err)
 	}
@@ -68,27 +65,12 @@ func getNICs(nodeGroups map[string]gomaasapi.MAASObject, uuidNG string) []Interf
 	return nics
 }
 
-func listNICs() {
-	client := getClient()
-	maas := gomaasapi.NewMAAS(*client)
-	ng := maas.GetSubObject("nodegroups")
-	debugf("got nodegroups and nodegroupinterfaces endpoints, calling GET")
-
-	var uuids []string
-	logf("listing all node groups\n\n")
-	nodeGroups := getNodeGroups(ng)
-	for uuid, ngObj := range nodeGroups {
-		uuids = append(uuids, uuid)
-		data, err := ngObj.MarshalJSON()
-		if err != nil {
-			fatalf("serializing to JSON failed: %v", err)
-		}
-		fmt.Println(string(data))
-	}
-	logf("\nlisting all NICs for all node groups %v\n", uuids)
+func listNICs(maasRoot *gomaasapi.MAASObject) {
+	debugf("getting all node groups UUIDs")
+	uuids := getNodeGroupsUUIDs(maasRoot)
+	logf("listing all NICs for node groups: %v\n", uuids)
 	for _, uuid := range uuids {
-		logf("\nnode group %q NICs:\n\n", uuid)
-		for _, nic := range getNICs(nodeGroups, uuid) {
+		for _, nic := range getNICs(maasRoot, uuid) {
 			fmt.Println(nic.GoString(), "\n")
 		}
 	}

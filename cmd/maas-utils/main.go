@@ -63,8 +63,12 @@ var (
 
 // Supported subcommands.
 var subcommands = map[string]string{
-	"list-ips":      "Lists all statically allocated IP addresses",
-	"release-ips":   "Releases all statically allocated IP addresses",
+	"list-ips":    "Lists all statically allocated IP addresses",
+	"release-ips": "Releases all statically allocated IP addresses",
+	"reserve-ip": `Reserve a static IP on a given network.
+    Arguments:
+      network name (required),
+      ip (optional, used if specified; if 'random' will pick a random IP within the static range)`,
 	"list-networks": "Lists all networks defined in MAAS",
 	"list-nics":     "Lists all interfaces of all node groups",
 }
@@ -100,7 +104,11 @@ func main() {
 
 	flag.Parse()
 
-	if _, ok := subcommands[flag.Arg(0)]; !ok || flag.NArg() != 1 {
+	if _, ok := subcommands[flag.Arg(0)]; !ok || flag.NArg() < 1 {
+		flag.Usage()
+	}
+	if flag.NArg() != 1 && flag.Arg(0) != "reserve-ip" {
+		// Only reserve-ip takes extra arguments.
 		flag.Usage()
 	}
 
@@ -111,15 +119,19 @@ func main() {
 		fatalf("MAAS OAuth key not specified.")
 	}
 
+	_, maasRoot := connect()
+
 	switch flag.Arg(0) {
 	case "list-ips":
-		listIPs()
+		listIPs(maasRoot)
 	case "release-ips":
-		releaseIPs()
+		releaseIPs(maasRoot)
+	case "reserve-ip":
+		reserveIP(maasRoot, flag.Arg(1), flag.Arg(2))
 	case "list-networks":
-		listNetworks()
+		listNetworks(maasRoot)
 	case "list-nics":
-		listNICs()
+		listNICs(maasRoot)
 	}
 }
 
@@ -141,11 +153,11 @@ func fatalf(f string, a ...interface{}) {
 	os.Exit(2)
 }
 
-func getClient() *gomaasapi.Client {
+func connect() (*gomaasapi.Client, *gomaasapi.MAASObject) {
 	client, err := gomaasapi.NewAuthenticatedClient(*serverURL, *oauthKey, maasAPIVersion)
 	if err != nil {
 		fatalf("cannot connect: %v", err)
 	}
 	debugf("connected to %q", *serverURL)
-	return client
+	return client, gomaasapi.NewMAAS(*client)
 }

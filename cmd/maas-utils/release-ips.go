@@ -6,14 +6,10 @@ import (
 	"launchpad.net/gomaasapi"
 )
 
-func releaseIPs() {
-	client := getClient()
-	maas := gomaasapi.NewMAAS(*client)
-	ips := maas.GetSubObject("ipaddresses")
-	debugf("got ipaddresses endpoint, calling GET")
-
+func releaseIPs(maasRoot *gomaasapi.MAASObject) {
 	var released, failed int
-	allIPs := getIPs(ips)
+	allIPs := getIPs(maasRoot)
+	ips := maasRoot.GetSubObject("ipaddresses")
 	for _, ip := range allIPs {
 		debugf("trying to release %q", ip.IP)
 

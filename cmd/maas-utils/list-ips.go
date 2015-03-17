@@ -7,7 +7,8 @@ import (
 	"launchpad.net/gomaasapi"
 )
 
-func getIPs(ipaddrs gomaasapi.MAASObject) []StaticIP {
+func getIPs(maasRoot *gomaasapi.MAASObject) []StaticIP {
+	ipaddrs := maasRoot.GetSubObject("ipaddresses")
 	result, err := ipaddrs.CallGet("", nil)
 	if err != nil {
 		fatalf("cannot get IPs: %v", err)
@@ -33,11 +34,8 @@ func getIPs(ipaddrs gomaasapi.MAASObject) []StaticIP {
 	return ips
 }
 
-func listIPs() {
-	ips := gomaasapi.NewMAAS(*getClient()).GetSubObject("ipaddresses")
-	debugf("got ipaddresses endpoint, calling GET")
-
-	allIPs := getIPs(ips)
+func listIPs(maasRoot *gomaasapi.MAASObject) {
+	allIPs := getIPs(maasRoot)
 	logf("listing %d static IPs in MAAS:\n", len(allIPs))
 	for _, ip := range allIPs {
 		fmt.Println(ip.GoString(), "\n")

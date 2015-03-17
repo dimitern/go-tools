@@ -60,6 +60,18 @@ func (m FieldsMap) AddressField(name string, optional bool) (Address, error) {
 	}, nil
 }
 
+func (m FieldsMap) NetmaskField(name string, optional bool) (net.IPMask, error) {
+	nothing := net.IPMask{}
+	mask, err := m.StringField(name, optional)
+	if err != nil {
+		return nothing, err
+	}
+	if mask == "" && !optional {
+		return nothing, fmt.Errorf("required field %q is empty", name)
+	}
+	return ParseIPv4Mask(mask)
+}
+
 func (m FieldsMap) TimeField(name string, optional bool) (time.Time, error) {
 	nothing := time.Time{}
 	val, err := m.StringField(name, optional)

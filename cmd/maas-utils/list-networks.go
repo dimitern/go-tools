@@ -7,7 +7,8 @@ import (
 	"launchpad.net/gomaasapi"
 )
 
-func getNetworks(nets gomaasapi.MAASObject) map[string]Network {
+func getNetworks(maasRoot *gomaasapi.MAASObject) map[string]Network {
+	nets := maasRoot.GetSubObject("networks")
 	result, err := nets.CallGet("", nil)
 	if err != nil {
 		fatalf("cannot get networks: %v", err)
@@ -37,11 +38,8 @@ func getNetworks(nets gomaasapi.MAASObject) map[string]Network {
 	return networks
 }
 
-func listNetworks() {
-	nets := gomaasapi.NewMAAS(*getClient()).GetSubObject("networks")
-	debugf("got networks endpoint, calling GET")
-
-	nws := getNetworks(nets)
+func listNetworks(maasRoot *gomaasapi.MAASObject) {
+	nws := getNetworks(maasRoot)
 	logf("listing %d networks in MAAS:\n", len(nws))
 	for _, nw := range nws {
 		fmt.Println(nw.GoString(), "\n")
