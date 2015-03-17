@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"launchpad.net/gomaasapi"
@@ -36,7 +37,7 @@ func getNodeGroups(ng gomaasapi.MAASObject) map[string]gomaasapi.MAASObject {
 	return ng2obj
 }
 
-func getNICs(nodeGroups map[string]gomaasapi.MAASObject, uuidNG string) []gomaasapi.JSONObject {
+func getNICs(nodeGroups map[string]gomaasapi.MAASObject, uuidNG string) []Interface {
 	nodeGroup, ok := nodeGroups[uuidNG]
 	if !ok {
 		fatalf("cannot find node group %q in %v", uuidNG, nodeGroups)
@@ -51,7 +52,20 @@ func getNICs(nodeGroups map[string]gomaasapi.MAASObject, uuidNG string) []gomaas
 		fatalf("cannot list node group %q interfaces: %v", uuidNG, err)
 	}
 	debugf("GetArray returned %d results", len(list))
-	return list
+	nics := make([]Interface, len(list))
+	for i, nic := range list {
+		data, err := nic.MarshalJSON()
+		if err != nil {
+			fatalf("serializing to JSON failed: %v", err)
+		}
+		var iface Interface
+		if err := json.Unmarshal(data, &iface); err != nil {
+			fatalf("deserializing from JSON failed: %v", err)
+		}
+		iface.ClusterID = uuidNG
+		nics[i] = iface
+	}
+	return nics
 }
 
 func listNICs() {
@@ -61,7 +75,7 @@ func listNICs() {
 	debugf("got nodegroups and nodegroupinterfaces endpoints, calling GET")
 
 	var uuids []string
-	fmt.Printf("listing all node groups\n\n")
+	logf("listing all node groups\n\n")
 	nodeGroups := getNodeGroups(ng)
 	for uuid, ngObj := range nodeGroups {
 		uuids = append(uuids, uuid)
@@ -71,15 +85,11 @@ func listNICs() {
 		}
 		fmt.Println(string(data))
 	}
-	fmt.Printf("\nlisting all NICs for all node groups %v\n", uuids)
+	logf("\nlisting all NICs for all node groups %v\n", uuids)
 	for _, uuid := range uuids {
-		fmt.Printf("\nnode group %q NICs:\n\n", uuid)
-		for i, nic := range getNICs(nodeGroups, uuid) {
-			data, err := nic.MarshalJSON()
-			if err != nil {
-				fatalf("serializing NIC #%d to JSON failed: %v", i, err)
-			}
-			fmt.Println(string(data))
+		logf("\nnode group %q NICs:\n\n", uuid)
+		for _, nic := range getNICs(nodeGroups, uuid) {
+			fmt.Println(nic.GoString(), "\n")
 		}
 	}
 }
