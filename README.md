@@ -1,5 +1,5 @@
 # go-tools
-Collection of random tools I find useful, written in Go.
+Collection of random tools I find useful, written (mostly) in Go.
 
 ## maas-utils
 Using [gomaasapi](https://launchpad.net/gomaasapi), this command-line tool provides access to a running [MaaS](https://maas.ubuntu.com/) server. Supported sub-commands:
@@ -9,3 +9,5 @@ Using [gomaasapi](https://launchpad.net/gomaasapi), this command-line tool provi
  - **list-networks** - display all networks in MaaS.
  - **list-nics** - display all node group interfaces.
 
+## juju test scripts
+Exercising common networking scenarios.
