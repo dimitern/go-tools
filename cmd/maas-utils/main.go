@@ -28,15 +28,16 @@ Accepted flags:
   -h
     Display this help information. Also supported: --help.
   -d
-    Enable verbose output for debugging.
+    Enable verbose output for debugging. With "describe", prints the
+    parsed and indented raw JSON instead of the processed API description.
 
   -u <url>
     Required, unless the %s environment variable is set.
     <url> is the MAAS server URL (e.g. http://192.168.50.2/MAAS).
 
   -o <oauth-key>
-    Required, unless the %s environment variable is set.
-    <oauth-key> is needed to authenticate with the MAAS API.
+    Required, unless the %s environment variable is set, or "describe".
+    is called. <oauth-key> is needed to authenticate with the MAAS API.
     Expected format: 'xxx:yyy:zzz'.
 
 Supported commands:
@@ -71,6 +72,7 @@ var subcommands = map[string]string{
       ip (optional, used if specified; if 'random' will pick a random IP within the static range)`,
 	"list-networks": "Lists all networks defined in MAAS",
 	"list-nics":     "Lists all interfaces of all node groups",
+	"describe":      "Get MAAS API description",
 }
 
 func main() {
@@ -107,6 +109,7 @@ func main() {
 	if _, ok := subcommands[flag.Arg(0)]; !ok || flag.NArg() < 1 {
 		flag.Usage()
 	}
+
 	if flag.NArg() != 1 && flag.Arg(0) != "reserve-ip" {
 		// Only reserve-ip takes extra arguments.
 		flag.Usage()
@@ -114,6 +117,19 @@ func main() {
 
 	if *serverURL == "" {
 		fatalf("MAAS server URL not specified.")
+	}
+	if flag.Arg(0) == "describe" {
+		apiDesc, rawJSON, err := GetAPIDescription(*serverURL)
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(3)
+		}
+		if *debug {
+			fmt.Println(rawJSON)
+		} else {
+			fmt.Println(apiDesc.Format())
+		}
+		os.Exit(0)
 	}
 	if *oauthKey == "" {
 		fatalf("MAAS OAuth key not specified.")
