@@ -1,0 +1,2 @@
+//-build: windows
+return nil // i.e. [Make everything OK] pressed
