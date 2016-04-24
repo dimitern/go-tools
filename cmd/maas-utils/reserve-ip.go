@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"launchpad.net/gomaasapi"
+	"github.com/juju/gomaasapi"
 )
 
 func reserveIP(maasRoot *gomaasapi.MAASObject, netName, ipAddr string) {

@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"launchpad.net/gomaasapi"
+	"github.com/juju/gomaasapi"
 )
 
 const (

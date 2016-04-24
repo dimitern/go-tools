@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"launchpad.net/gomaasapi"
+	"github.com/juju/gomaasapi"
 )
 
 func getNodeGroupsUUIDs(maasRoot *gomaasapi.MAASObject) []string {

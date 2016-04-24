@@ -3,7 +3,7 @@ package main
 import (
 	"net/url"
 
-	"launchpad.net/gomaasapi"
+	"github.com/juju/gomaasapi"
 )
 
 func releaseIPs(maasRoot *gomaasapi.MAASObject) {
